@@ -38,7 +38,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define UART_TIMEOUT 30000
+#define UART_TIMEOUT 5000
 #define UART_BUFFER_SIZE 8192
 /* USER CODE END PM */
 
@@ -107,14 +107,14 @@ int main(void)
 
   // First message
 
-  uartBufferSize = sprintf(uartBuffer, "HELLO");
+  uartBufferSize = (uint16_t) sprintf((char *) uartBuffer, "HELLO");
   writeUART(&huart1, uartBuffer, uartBufferSize);
 
   readUART(&huart3, uartBuffer, UART_BUFFER_SIZE);
 
   // Second message
 
-  uartBufferSize = sprintf(uartBuffer, "SALUT");
+  uartBufferSize = (uint16_t) sprintf((char *) uartBuffer, "SALUT");
   writeUART(&huart3, uartBuffer, uartBufferSize);
 
   readUART(&huart1, uartBuffer, UART_BUFFER_SIZE);
@@ -123,16 +123,18 @@ int main(void)
 
   // Generate a 5000 bytes strings of alternating 0 and 1 (0xAA)
   uartBufferSize = 5000;
-  for (uint8_t ptr = uartBuffer; ptr < (uartBuffer + uartBufferSize); ptr++) {
-	  *ptr = 0xAA;
+  for (uint8_t *ptr = uartBuffer; ptr < (uartBuffer + uartBufferSize); ptr++) {
+	  *ptr = (uint8_t) 0xAA;
   }
+  uartBuffer[uartBufferSize] = '\0';
+
   writeUART(&huart1, uartBuffer, uartBufferSize);
 
-  readUart(&huart3, uartBuffer, UART_BUFFER_SIZE);
+  readUART(&huart3, uartBuffer, UART_BUFFER_SIZE);
 
   // Fourth message
 
-  uartBufferSize = sprintf(uartBuffer, "ACK");
+  uartBufferSize = (uint16_t) sprintf((char *) uartBuffer, "ACK");
   writeUART(&huart3, uartBuffer, uartBufferSize);
 
   readUART(&huart1, uartBuffer, UART_BUFFER_SIZE);
@@ -333,35 +335,35 @@ static void MX_GPIO_Init(void)
 
 void writeUART(UART_HandleTypeDef *huart, uint8_t *buffer, uint16_t size) {
 
-	char uartLabel[6];
+	char uartLabel[7];
 
-	if (huart == &huart1) uartLabel = "UART_1";
-	if (huart == &huart2) uartLabel = "UART_2";
-	if (huart == &huart3) uartLabel = "UART_3";
+	if (huart == &huart1) sprintf(uartLabel, "UART_1");
+	if (huart == &huart2) sprintf(uartLabel, "UART_2");
+	if (huart == &huart3) sprintf(uartLabel, "UART_3");
 
 	uint8_t uartDebugMsg[UART_BUFFER_SIZE];
 	uint16_t uartDebugMsgSize = 0;
 
 	HAL_UART_Transmit(huart, buffer, size, UART_TIMEOUT);
 
-	uartDebugMsgSize = sprintf(uartDebugMsg, "[%s] Wrote %s\n\r", uartLabel, buffer);
+	uartDebugMsgSize = sprintf((char *) uartDebugMsg, "[%s] Wrote %s\n\r", uartLabel, buffer);
 	HAL_UART_Transmit(&huart2, uartDebugMsg, uartDebugMsgSize, UART_TIMEOUT);
 }
 
 void readUART(UART_HandleTypeDef *huart, uint8_t *buffer, uint16_t size) {
 
-	char uartLabel[6];
+	char uartLabel[7];
 
-	if (huart == &huart1) uartLabel = "UART_1";
-	if (huart == &huart2) uartLabel = "UART_2";
-	if (huart == &huart3) uartLabel = "UART_3";
+	if (huart == &huart1) sprintf(uartLabel, "UART_1");
+	if (huart == &huart2) sprintf(uartLabel, "UART_2");
+	if (huart == &huart3) sprintf(uartLabel, "UART_3");
 
 	uint8_t uartDebugMsg[UART_BUFFER_SIZE];
 	uint16_t uartDebugMsgSize = 0;
 
 	HAL_UART_Receive(huart, buffer, size, UART_TIMEOUT);
 
-	uartDebugMsgSize = sprintf(uartDebugMsg, "[%s] Read %s\n\r", uartLabel, buffer);
+	uartDebugMsgSize = sprintf((char *)uartDebugMsg, "[%s] Read %s\n\r", uartLabel, buffer);
 	HAL_UART_Transmit(&huart2, uartDebugMsg, uartDebugMsgSize, UART_TIMEOUT);
 }
 
