@@ -54,8 +54,6 @@ extern "C" {
 
 /* USER CODE END EM */
 
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -82,9 +80,9 @@ typedef enum {
 } role_t;
 typedef uint8_t cipher_key_t;
 typedef uint8_t frame_t;
-#define FRAME_HEADER_SIZE (sizeof (frame_t))
-#define MAX_FRAME_SIZE (0x1FFF)
-#define TIMEOUT (0xFFFF)
+#define FRAME_HEADER_SIZE (2)
+#define MAX_FRAME_SIZE (100)
+#define TIMEOUT (5000)
 typedef enum {
 	MSG_TYPE_CLEF = 0,
 	MSG_TYPE_OKCLEF = 2,

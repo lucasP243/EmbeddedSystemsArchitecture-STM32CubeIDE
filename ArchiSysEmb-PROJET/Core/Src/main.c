@@ -40,8 +40,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-TIM_HandleTypeDef htim2;
-
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
@@ -63,7 +61,6 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART3_UART_Init(void);
-static void MX_TIM2_Init(void);
 void startCommMgr(void const * argument);
 void startBT1Mgr(void const * argument);
 void startInputMgr(void const * argument);
@@ -114,7 +111,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
-  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -142,11 +138,11 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of COMM_MGR */
-  osThreadDef(COMM_MGR, startCommMgr, osPriorityAboveNormal, 0, 128);
+  osThreadDef(COMM_MGR, startCommMgr, osPriorityNormal, 0, 128);
   COMM_MGRHandle = osThreadCreate(osThread(COMM_MGR), NULL);
 
   /* definition and creation of BT1_MGR */
-  osThreadDef(BT1_MGR, startBT1Mgr, osPriorityLow, 0, 128);
+  osThreadDef(BT1_MGR, startBT1Mgr, osPriorityNormal, 0, 128);
   BT1_MGRHandle = osThreadCreate(osThread(BT1_MGR), NULL);
 
   /* definition and creation of INPUT_MGR */
@@ -155,7 +151,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
-	//HAL_UART_Transmit(&huart2, (uint8_t *) "\n\r*** Program Started ***\n\r", 27, 5);
+  HAL_UART_Transmit(&huart2, (uint8_t *) "\n\r*** Program Started ***\n\r", 27, 5);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -211,65 +207,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 9999;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 799;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-  HAL_TIM_MspPostInit(&htim2);
-
 }
 
 /**
@@ -419,6 +356,7 @@ void writeHeader(frame_t *header, msg_type_t msgType, msg_size_t msgSize) {
 bool readUART(UART_HandleTypeDef *huart, frame_t *data, msg_size_t size) {
 
 	HAL_StatusTypeDef status = HAL_UART_Receive(huart, data, size, TIMEOUT);
+	bool retVal = (status == HAL_OK);
 
 	char *label = "-----";
 	if (huart == &huart1) {
@@ -450,13 +388,16 @@ bool readUART(UART_HandleTypeDef *huart, frame_t *data, msg_size_t size) {
 
 	(void) osMutexWait(debugLockHandle, 0);
 	HAL_UART_Transmit(&huart2, (uint8_t *) debugMsg, sizeof (debugMsg), TIMEOUT);
+	HAL_UART_Transmit(&huart2, (uint8_t *) data, size, TIMEOUT);
+	HAL_UART_Transmit(&huart2, (uint8_t *) "\n\r", 2, TIMEOUT);
 	(void) osMutexRelease(debugLockHandle);
 
-	return (status == HAL_OK);
+	return retVal;
 }
 bool writeUART(UART_HandleTypeDef *huart, const frame_t *data, msg_size_t size) {
 
 	HAL_StatusTypeDef status = HAL_UART_Transmit(huart, data, size, TIMEOUT);
+	bool retVal = (status == HAL_OK);
 
 	char *label = "-----";
 	if (huart == &huart1) {
@@ -492,7 +433,7 @@ bool writeUART(UART_HandleTypeDef *huart, const frame_t *data, msg_size_t size) 
 	HAL_UART_Transmit(&huart2, (uint8_t *) "\n\r", 2, TIMEOUT);
 	(void) osMutexRelease(debugLockHandle);
 
-	return (status == HAL_OK);
+	return retVal;
 }
 /* USER CODE END 4 */
 
@@ -506,15 +447,11 @@ bool writeUART(UART_HandleTypeDef *huart, const frame_t *data, msg_size_t size) 
 void startCommMgr(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-
-	//(void) osMutexWait(debugLockHandle, 0);
-	HAL_UART_Transmit(&huart2, (uint8_t *) "test\n\r", 6, TIMEOUT);
-	//(void) osMutexRelease(debugLockHandle);
-
 	frame_t header[FRAME_HEADER_SIZE];
 	frame_t ioBuffer[MAX_FRAME_SIZE];
 	msg_type_t msgType;
 	msg_size_t msgSize;
+
 
 	memset(header, 0, FRAME_HEADER_SIZE);
 	memset(ioBuffer, 0, MAX_FRAME_SIZE);
@@ -568,7 +505,7 @@ void startCommMgr(void const * argument)
 			readHeader(header, &msgType, &msgSize);
 
 			if (msgType != MSG_TYPE_OKCLEF) {
-				HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); // signal error
+				//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); // signal error
 				continue;
 			}
 
@@ -690,7 +627,7 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
 	/* User can add his own implementation to report the HAL error return state */
 	__disable_irq();
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	//HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
 	while (1) {
 		osDelay(1);
 	}
