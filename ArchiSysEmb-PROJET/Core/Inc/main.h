@@ -31,7 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdint.h>
+#include <stddef.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -72,7 +73,13 @@ void Error_Handler(void);
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
-
+typedef enum {
+	ROLE_NONE,
+	ROLE_INPUT,
+	ROLE_OUTPUT,
+	ROLE_TRANSIT,
+} role_t;
+typedef key_t uint8_t;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -52,7 +52,9 @@ osThreadId INPUT_MGRHandle;
 osMutexId debugLockHandle;
 osStaticMutexDef_t debugLockControlBlock;
 /* USER CODE BEGIN PV */
-
+role_t role = ROLE_NONE;
+key_r readKey;
+key_r writeKey;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -67,7 +69,9 @@ void startBT1Mgr(void const * argument);
 void startInputMgr(void const * argument);
 
 /* USER CODE BEGIN PFP */
-
+void cipher(uint8_t *, size_t, key_t);
+void decipher(uint8_t *, size_t, key_t);
+key_t generateKey();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -91,7 +95,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  TM_RNG_Init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -387,7 +391,15 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void cipher(uint8_t *message, size_t messageSize, key_t key) {
+	return;
+}
+void decipher(uint8_t *message, size_t messageSize, key_t key) {
 
+}
+void generateKey() {
+
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_startCommMgr */
@@ -401,7 +413,7 @@ void startCommMgr(void const * argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  for(;;)
+  while (role != ROLE_INPUT) // If input, terminate the thread
   {
     osDelay(1);
   }
