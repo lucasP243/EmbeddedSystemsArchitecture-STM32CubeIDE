@@ -1,21 +1,21 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2022 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.h
+ * @brief          : Header for main.c file.
+ *                   This file contains the common defines of the application.
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2022 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -31,7 +31,12 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdbool.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <stddef.h>
+#include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -72,7 +77,24 @@ void Error_Handler(void);
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
-
+typedef enum {
+	ROLE_NONE, ROLE_INPUT, ROLE_OUTPUT, ROLE_TRANSIT,
+} role_t;
+typedef uint8_t cipher_key_t;
+typedef uint8_t frame_t;
+#define FRAME_HEADER_SIZE (2)
+#define MAX_FRAME_SIZE (100)
+#define TIMEOUT (5000)
+typedef enum {
+	MSG_TYPE_CLEF = 0,
+	MSG_TYPE_OKCLEF = 2,
+	MSG_TYPE_MSG = 1,
+	MSG_TYPE_OKMSG = 3,
+	MSG_TYPE_KOMSG = 5,
+} msg_type_t;
+typedef uint16_t msg_size_t;
+#define HEADER_TYPE_MASK (0xE000)
+#define HEADER_SIZE_MASK (0x1FFF)
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
