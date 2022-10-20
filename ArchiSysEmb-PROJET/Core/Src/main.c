@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
- ******************************************************************************
- * @file           : main.c
- * @brief          : Main program body
- ******************************************************************************
- * @attention
- *
- * Copyright (c) 2022 STMicroelectronics.
- * All rights reserved.
- *
- * This software is licensed under terms that can be found in the LICENSE file
- * in the root directory of this software component.
- * If no LICENSE file comes with this software, it is provided AS-IS.
- *
- ******************************************************************************
- */
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Main program body
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2022 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -22,7 +22,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -41,17 +40,17 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
-osThreadId defaultTaskHandle;
-osThreadId UART2_TXHandle;
-osThreadId MANAGE_LD2Handle;
-osThreadId UART1_RXHandle;
-osThreadId UART1_TXHandle;
-osMessageQId DEBUG_LOG_QUEUEHandle;
+osThreadId COMM_MGRHandle;
+osThreadId BT1_MGRHandle;
+osThreadId INPUT_MGRHandle;
+osMutexId debugLockHandle;
+osStaticMutexDef_t debugLockControlBlock;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -60,13 +59,12 @@ osMessageQId DEBUG_LOG_QUEUEHandle;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_TIM3_Init(void);
+static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
-void StartDefaultTask(void const * argument);
-void uart2Tx(void const * argument);
-void manageLD2(void const * argument);
-void uart1RX(void const * argument);
-void uart1TX(void const * argument);
+static void MX_USART3_UART_Init(void);
+void startCommMgr(void const * argument);
+void startBT1Mgr(void const * argument);
+void startInputMgr(void const * argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -106,56 +104,49 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_TIM3_Init();
+  MX_TIM2_Init();
   MX_USART1_UART_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
+  /* Create the mutex(es) */
+  /* definition and creation of debugLock */
+  osMutexStaticDef(debugLock, &debugLockControlBlock);
+  debugLockHandle = osMutexCreate(osMutex(debugLock));
+
   /* USER CODE BEGIN RTOS_MUTEX */
-	/* add mutexes, ... */
+  /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-	/* add semaphores, ... */
+  /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-	/* start timers, add new ones, ... */
+  /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
-  /* Create the queue(s) */
-  /* definition and creation of DEBUG_LOG_QUEUE */
-  osMessageQDef(DEBUG_LOG_QUEUE, 8, 512);
-  DEBUG_LOG_QUEUEHandle = osMessageCreate(osMessageQ(DEBUG_LOG_QUEUE), NULL);
-
   /* USER CODE BEGIN RTOS_QUEUES */
-	/* add queues, ... */
+  /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  /* definition and creation of COMM_MGR */
+  osThreadDef(COMM_MGR, startCommMgr, osPriorityHigh, 0, 128);
+  COMM_MGRHandle = osThreadCreate(osThread(COMM_MGR), NULL);
 
-  /* definition and creation of UART2_TX */
-  osThreadDef(UART2_TX, uart2Tx, osPriorityIdle, 0, 128);
-  UART2_TXHandle = osThreadCreate(osThread(UART2_TX), NULL);
+  /* definition and creation of BT1_MGR */
+  osThreadDef(BT1_MGR, startBT1Mgr, osPriorityLow, 0, 128);
+  BT1_MGRHandle = osThreadCreate(osThread(BT1_MGR), NULL);
 
-  /* definition and creation of MANAGE_LD2 */
-  osThreadDef(MANAGE_LD2, manageLD2, osPriorityIdle, 0, 128);
-  MANAGE_LD2Handle = osThreadCreate(osThread(MANAGE_LD2), NULL);
-
-  /* definition and creation of UART1_RX */
-  osThreadDef(UART1_RX, uart1RX, osPriorityIdle, 0, 128);
-  UART1_RXHandle = osThreadCreate(osThread(UART1_RX), NULL);
-
-  /* definition and creation of UART1_TX */
-  osThreadDef(UART1_TX, uart1TX, osPriorityIdle, 0, 128);
-  UART1_TXHandle = osThreadCreate(osThread(UART1_TX), NULL);
+  /* definition and creation of INPUT_MGR */
+  osThreadDef(INPUT_MGR, startInputMgr, osPriorityNormal, 0, 128);
+  INPUT_MGRHandle = osThreadCreate(osThread(INPUT_MGR), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
-	/* add threads, ... */
+  /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -164,12 +155,12 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	while (1) {
+  while (1)
+  {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-	}
+  }
   /* USER CODE END 3 */
 }
 
@@ -215,47 +206,61 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief TIM3 Initialization Function
+  * @brief TIM2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_TIM3_Init(void)
+static void MX_TIM2_Init(void)
 {
 
-  /* USER CODE BEGIN TIM3_Init 0 */
+  /* USER CODE BEGIN TIM2_Init 0 */
 
-  /* USER CODE END TIM3_Init 0 */
+  /* USER CODE END TIM2_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
-  /* USER CODE BEGIN TIM3_Init 1 */
+  /* USER CODE BEGIN TIM2_Init 1 */
 
-  /* USER CODE END TIM3_Init 1 */
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 1599;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 9999;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 399;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 9999;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM3_Init 2 */
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0xFFF;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
 
-  /* USER CODE END TIM3_Init 2 */
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 
@@ -326,6 +331,39 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -340,21 +378,11 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 
@@ -362,122 +390,58 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_startCommMgr */
 /**
- * @brief  Function implementing the defaultTask thread.
- * @param  argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+  * @brief  Function implementing the COMM_MGR thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_startCommMgr */
+void startCommMgr(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-	/* Infinite loop */
-	for (;;) {
-		osDelay(1);
-	}
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_uart2Tx */
+/* USER CODE BEGIN Header_startBT1Mgr */
 /**
-* @brief Function implementing the UART2_TX thread.
+* @brief Function implementing the BT1_MGR thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_uart2Tx */
-void uart2Tx(void const * argument)
+/* USER CODE END Header_startBT1Mgr */
+void startBT1Mgr(void const * argument)
 {
-  /* USER CODE BEGIN uart2Tx */
-  /* Infinite loop */
-  for(;;)
-  {
-	osMessageGet(DEBUG_LOG_QUEUEHandle, 0);
-    osDelay(1);
-  }
-  /* USER CODE END uart2Tx */
-}
-
-/* USER CODE BEGIN Header_manageLD2 */
-/**
- * @brief Function implementing the MANAGE_LD2 thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_manageLD2 */
-void manageLD2(void const * argument)
-{
-  /* USER CODE BEGIN manageLD2 */
-
-	bool buttonPressed = false;
-	LEDState state = LED_STATE_OFF;
-
-	/* Infinite loop */
-	for (;;) {
-		if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
-			if (buttonPressed == false) {
-				buttonPressed = true;
-				state = LED_STATE_NEXT(state);
-				HAL_TIM_Base_Stop_IT(&htim3);
-
-				switch (state) {
-
-				case LED_STATE_BLINKING:
-					HAL_TIM_Base_Start_IT(&htim3);
-					// carry over
-
-				case LED_STATE_OFF:
-					HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-					break;
-
-				case LED_STATE_ON:
-					HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-					break;
-				}
-			}
-		} else {
-			buttonPressed = false;
-		}
-
-		osDelay(1);
-	}
-  /* USER CODE END manageLD2 */
-}
-
-/* USER CODE BEGIN Header_uart1RX */
-/**
-* @brief Function implementing the UART1_RX thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_uart1RX */
-void uart1RX(void const * argument)
-{
-  /* USER CODE BEGIN uart1RX */
+  /* USER CODE BEGIN startBT1Mgr */
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
   }
-  /* USER CODE END uart1RX */
+  /* USER CODE END startBT1Mgr */
 }
 
-/* USER CODE BEGIN Header_uart1TX */
+/* USER CODE BEGIN Header_startInputMgr */
 /**
-* @brief Function implementing the UART1_TX thread.
+* @brief Function implementing the INPUT_MGR thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_uart1TX */
-void uart1TX(void const * argument)
+/* USER CODE END Header_startInputMgr */
+void startInputMgr(void const * argument)
 {
-  /* USER CODE BEGIN uart1TX */
+  /* USER CODE BEGIN startInputMgr */
   /* Infinite loop */
   for(;;)
   {
     osDelay(1);
   }
-  /* USER CODE END uart1TX */
+  /* USER CODE END startInputMgr */
 }
 
 /**
@@ -497,9 +461,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-	if (htim == &htim3) {
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-	}
+
   /* USER CODE END Callback 1 */
 }
 
@@ -510,10 +472,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	__disable_irq();
-	while (1) {
-	}
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1)
+  {
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 
